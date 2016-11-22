@@ -13,22 +13,46 @@ pygame.init();
 DELAY = 8000;
 bgcolor = (0,0,255)
 
-class Something(Sprite):
+class Bloon(Sprite):
 	def __init__(self):
 		Sprite.__init__(self)
-		self.image = image.load("loco.jpg").convert_alpha()#covert vs convert_alpha (make alpha-transparency for png images)
+		
+		self.image = image.load("bloon.jpg").convert_alpha()#covert vs convert_alpha (make alpha-transparency for png images)
 		self.rect = self.image.get_rect()
+
+	def move(self):
+		try:
+			self.rect.x += 1
+			self.rect.y += 1
+		except:
+			print ("fail")
 
 #def hit(self, target)
 	#return self.rect.colliderect(target)
 init()
 
-screen = display.set_mode((640, 480))
+screen = display.set_mode((640, 640))
 display.set_caption("Games are fun")
 
+f = font.Font(None, 25)
 
-sp = Something()
-sprites = RenderPlain(sp)
+bloon = Bloon()
+sprites = RenderPlain(bloon)
 
-time.set_timer(USEREVENT+ 1, DELAY) is for timer
+hits = 0
+time.set_timer(USEREVENT+ 1, DELAY) #is for timer
 
+while True:
+	e = event.poll()
+
+	if e.type == QUIT:
+		quit()
+		break
+
+	elif e.type == USEREVENT + 1:
+		bloon.move()
+
+	screen.fill(bgcolor)
+	sprites.update()
+	sprites.draw(screen)
+	display.update()
