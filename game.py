@@ -16,7 +16,7 @@ bgcolor = (0,0,255)
 class Something(Sprite):
 	def __init__(self):
 		Sprite.__init__(self)
-		self.image = image.load("loco.jpg").convert_alpha()#or loco.bmp
+		self.image = image.load("loco.jpg").convert_alpha()#covert vs convert_alpha (make alpha-transparency for png images)
 		self.rect = self.image.get_rect()
 
 #def hit(self, target)
@@ -30,5 +30,5 @@ display.set_caption("Games are fun")
 sp = Something()
 sprites = RenderPlain(sp)
 
-#time.set_timer(USEREVENT+ 1, DELAY) is for timer
+time.set_timer(USEREVENT+ 1, DELAY) is for timer
 
