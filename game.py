@@ -59,6 +59,9 @@ class Monkey(Sprite):
     def setpos(self, x, y):
         self.rect.center = (x, y)
 
+    def getpos(self):
+        return self.rect.center
+
 class Star(Sprite):
 
     def __init__(self):
@@ -139,7 +142,7 @@ class Bloon(Sprite):
 def stop(gameover=False, pause=False, begin=False):
     t3 = fbig.render(" Game Over ", False, black, white)
     t4 = f.render(" Click anywhere to continue ", False, black, white)
-    t5 = fbig.render(" Paused ", False, black)
+    t5 = fbig.render(" Paused ", False, black, white)
     t6 = fmed.render(" Click on the grass to place a monkey! ", False, blue)
     t7 = f.render(" Monkeys on the top shoot down and right ", False, white, black)
     t8 = f.render(" Monkeys on the bottom shoot up and left ", False, white, black)
@@ -157,8 +160,8 @@ def stop(gameover=False, pause=False, begin=False):
     elif pause: 
         while True:
             e = pygame.event.wait()
-            screen.blit(t5, (275, 220))
-            screen.blit(t4, (330, 288))
+            screen.blit(t5, (325, 220))
+            screen.blit(t4, (329, 288))
 
             if e.type in (pygame.QUIT, pygame.MOUSEBUTTONDOWN): return
 
@@ -186,12 +189,10 @@ def addMonkey():
         if e.type in (pygame.QUIT, pygame.MOUSEBUTTONDOWN): return
         display.update()
 
-#determine bloon/star collision
-#input is bloon and group of star sprites
-#output is 
+#determine bloon/star collision, returns num of hits
 def collide():
 
-    temp = False
+    temp = 0
     for b in bloons:
         for s in stars:
             if b.hit(s):
@@ -201,8 +202,38 @@ def collide():
                 s.kill()
                 bloons.remove(b)
                 b.pop()
-                temp = True
+                temp += 1
     return temp
+
+def escaped():
+
+    temp = 0
+    for b in bloons:
+        if b.escaped():
+            temp += 1
+            bloons.remove(bl)
+            bl.pop()
+    return temp
+
+def throw():
+    for m in monkeys:
+        x, y = m.getpos()
+        if y < 330: star = Star()
+        else: star = BottomStar()
+        star.setpos(x+20, y)
+
+def runbloons(times=1):
+    for x in range(times):
+        if numbloons < 8:
+            newbloon = Bloon("red")
+            newbloon.setpos(-50, 328)
+
+        elif numbloons < 14:
+            nb = Bloon("rb")
+            newbloon = Bloon("blue")
+            nb.setpos(-50, 328)
+            newbloon.setpos(-50, 328)
+
 
 #main
 init()
@@ -228,6 +259,7 @@ screen.blit(bg, (0,0)) #sets background image
 
 hits = 0 #bloons hit
 health = 10 #health -= 1 for every escaped bloon
+temphits = 0 #keep track of when to add monkeys
 
 udtrigger = True #true = need to go up, false = need to go down
 stop(begin=True)
@@ -237,8 +269,8 @@ x, y = mouse.get_pos()
 monkey.setpos(x, y)
 
 sprites = RenderPlain(monkeys)
-counter = 0
-num = 0
+loopcounter = 0
+numbloons = 0
 
 #game loop
 while True:
@@ -248,6 +280,8 @@ while True:
     if e.type == QUIT:
         quit()
         break
+
+    elif e.type == MOUSEBUTTONDOWN: stop(pause=True)
 
     #if time has passed, move bloon and if star exists, move that too
     elif e.type == USEREVENT + 1:
@@ -261,47 +295,34 @@ while True:
 
     #sends star to pop bloon
     elif e.type == KEYDOWN:
-        if y < 330: star = Star()
-        else: star = BottomStar()
-        star.setpos(x+20, y)        
+        throw()        
 
 #if there is a hit, kill the bloon (and star)
-    for bl in bloons:
-        if collide():            
-            hits += 1
+    c = collide()
+    hits += c
+    temphits += c
 
-    #if bloon escaped, subtract health. check if health = 0, if true game is over
-        if bl.escaped():
-            health -= 1
-            if health <= 0: stop(gameover=True)
-
-            bloons.remove(bl)
-            bl.pop()
+#if bloon escaped, subtract health. check if health = 0, if true game is over
+    health -= escaped()
+    if health <= 0: stop(gameover=True)
 
 #sends bloons
-    if counter % 200 == 0:
-        if num < 8:
-            newbloon = Bloon("red")
-            newbloon.setpos(-50, 328)
-        elif num < 15:
-            nb = Bloon("rb")
-            newbloon = Bloon("blue")
-            
-            nb.setpos(-50, 328)
-            newbloon.setpos(-50, 328)
-        
-        
-        num += 1
-    counter += 1
+    if loopcounter % 200 == 0:
+        runbloons(len(monkeys))
+        numbloons += 1
+    loopcounter += 1     
 
-    if len(stars) > 0: sprites = RenderPlain(bloons, monkeys, stars)
-    else: sprites = RenderPlain(bloons, monkeys)
-
-    if num >= 22: 
+    if len(bloons) == 0 and temphits >= 10: 
         addMonkey()
         x, y = mouse.get_pos()
         m = Monkey()
         m.setpos(x, y)
+        temphits = 0
+        numbloons = 0
+
+
+    if len(stars) > 0: sprites = RenderPlain(bloons, monkeys, stars)
+    else: sprites = RenderPlain(bloons, monkeys)
 
 #render and update screen, sprites, and text
     t = f.render("Hits: " + str(hits), False, black)
