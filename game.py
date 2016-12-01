@@ -16,8 +16,8 @@ from pygame.sprite import *
 
 pygame.init();
 
-DELAY = 5;#20;
-blue = (127, 174, 249)
+DELAY = 20;
+blue = (50, 150, 255)
 green = (122, 244, 66)
 black = (0,0,0)
 white = (255,255,255)
@@ -25,6 +25,8 @@ white = (255,255,255)
 screenx = 900 #leaving room around the edges
 screeny = 600
 
+bloons = pygame.sprite.Group()
+stars = pygame.sprite.Group()
 
 class Border(Sprite):
 
@@ -43,7 +45,6 @@ class Border(Sprite):
         self.rect.x = x
         self.rect.y = y
 
-
 class Monkey(Sprite):
 
     def __init__(self):
@@ -57,18 +58,21 @@ class Monkey(Sprite):
     def setpos(self, x, y):
         self.rect.center = (x, y)
 
+    def getRect(self):
+        return self.rect.center
+
 class Star(Monkey):
 
     def __init__(self):
         Monkey.__init__(self)
-        Sprite.__init__(self)
+        Sprite.__init__(self, stars)
 
         im = image.load(r"media\ninja_star.png").convert_alpha()
         self.image = pygame.transform.scale(im, (30, 30))
 
         self.rect = self.image.get_rect()
 
-    def move(self):
+    def update(self):
         self.rect.x += 3
         self.rect.y += 3
 
@@ -76,39 +80,37 @@ class BottomStar(Monkey):
 
     def __init__(self):
         Monkey.__init__(self)
-        Sprite.__init__(self)
+        Sprite.__init__(self, stars)
 
         im = image.load(r"media\ninja_star.png").convert_alpha()
         self.image = pygame.transform.scale(im, (30, 30))
 
         self.rect = self.image.get_rect()
 
-    def move(self):
+    def update(self):
         self.rect.x -= 3
         self.rect.y -= 3
 
-
-
 class Bloon(Sprite):
-    def __init__(self):
-        Sprite.__init__(self)
+    def __init__(self, color="red"):
+        Sprite.__init__(self, bloons)
 
-        im = image.load(r"media\bloon_blue.png").convert_alpha()
-        self.image = pygame.transform.scale(im, (70, 90))
+        if color == "red": 
+            im = image.load(r"media\bloon_red.png").convert_alpha()
+            self.image = pygame.transform.scale(im, (60, 80))
+            self.speed = 1
+
+        elif color == "blue": 
+            im = image.load(r"media\bloon_blue.png").convert_alpha()
+            self.image = pygame.transform.scale(im, (70, 90))
+            self.speed = 2
+
+        elif color == "rb":
+            im = image.load(r"media\bloon_red.png").convert_alpha()
+            self.image = pygame.transform.scale(im, (60, 80))
+            self.speed = 2
 
         self.rect = self.image.get_rect()
-
-    def lmove(self):
-        self.rect.x -= 2
-
-    def rmove(self):
-        self.rect.x += 2
-
-    def umove(self):
-        self.rect.y -= 2
-
-    def dmove(self):
-        self.rect.y += 2
 
     def hit(self, border):
         return self.rect.colliderect(border)
@@ -121,13 +123,13 @@ class Bloon(Sprite):
         self.kill()
 
     def travel(self, ud):
-        if ud:
-            bloon.dmove()
-            bloon.rmove()
-        else:
-            bloon.umove()
-            bloon.rmove()
 
+        if ud:
+            self.rect.y += self.speed
+        else:
+            self.rect.y -= self.speed
+        self.rect.x += self.speed
+        
     def escaped(self):
         if self.rect.center > (screenx, screeny): 
             return True
@@ -172,7 +174,25 @@ def stop(gameover=False, pause=False, begin=False):
             if e.type in (pygame.QUIT, pygame.MOUSEBUTTONDOWN): return
 
             display.update()
-    
+
+#determine bloon/star collision
+#input is bloon and group of star sprites
+#output is 
+def collide():
+
+    temp = False
+    for b in bloons:
+        for s in stars:
+            if b.hit(s):
+
+                mixer.Sound(r"media\pop.wav").play()
+                stars.remove(s)
+                s.kill()
+                bloons.remove(b)
+                b.pop()
+                temp = True
+    return temp
+
 #main
 init()
 
@@ -185,16 +205,12 @@ fbig = font.Font(None, 100)
 
 b1 = Border() #top border
 b2 = Border() #bottom border
-bloon = Bloon() #balloon
 monkey = Monkey() #monkey
-# star = Star() #ninja star
-
-time.set_timer(USEREVENT+ 1, DELAY) #is for timer
 
 b1.setpos(0, 228)
 b2.setpos(0, 445)
-bloon.setpos(0, 328)
-# monkey.setpos(50, 228)
+
+time.set_timer(USEREVENT+ 1, DELAY) #is for timer
 
 bg = image.load(r"media\path_bg.png").convert_alpha()
 screen.blit(bg, (0,0)) #sets background image
@@ -205,21 +221,20 @@ health = 10 #health -= 1 for every escaped bloon
 udtrigger = True #true = need to go up, false = need to go down
 stop(begin=True)
 
+#set monkey position
 x, y = mouse.get_pos()
 monkey.setpos(x, y)
 
-sprites = RenderPlain(bloon, monkey)
+sprites = RenderPlain(monkey)
+counter = 0
+num = 0
+
+redbloons = 10
+bluebloons = 20
 
 #game loop
 while True:
-
     e = event.poll()
-
-#see if bloon needs to move up or down
-    if bloon.hit(b2):
-        udtrigger = False
-    elif bloon.hit(b1):
-        udtrigger = True
 
 #determine what to move or to exit game
     if e.type == QUIT:
@@ -228,40 +243,51 @@ while True:
 
     #if time has passed, move bloon and if star exists, move that too
     elif e.type == USEREVENT + 1:
-        bloon.travel(udtrigger)
-        try: star.move()
-        except: pass
+        #tells all bloons to move
+        for b in bloons:
+            #see if bloon needs to move up or down
+            if b.hit(b2): udtrigger = False
+            elif b.hit(b1): udtrigger = True
+
+            b.travel(udtrigger)
 
     #sends star to pop bloon
     elif e.type == KEYDOWN:
-
         if y < 330: star = Star()
         else: star = BottomStar()
-
-        star.setpos(x+20, y)
-        sprites = RenderPlain(bloon, monkey, star)
-        star.move()
+        star.setpos(x+20, y)        
 
 #if there is a hit, kill the bloon (and star)
-    if star and bloon.hit(star):
-        mixer.Sound(r"media\pop.wav").play()
-        bloon.kill()
-        star.kill()
-        hits += 1
-        bloon = Bloon()
-        bloon.setpos(0, 328)
-        sprites = RenderPlain(bloon, monkey)
-        print ("no")
+    for bl in bloons:
+        if collide():            
+            hits += 1
 
+    #if bloon escaped, subtract health. check if health = 0, if true game is over
+        if bl.escaped():
+            health -= 1
+            if health <= 0: stop(gameover=True)
 
-#if bloon escaped, subtract health. check if health = 0, if so game is over
-    if bloon.escaped():
-        health -= 1
-        if health <= 0: stop(True)
-        bloon.pop()
-        bloon = Bloon()
-        bloon.setpos(0, 328)
-        sprites = RenderPlain(bloon, monkey)
+            bloons.remove(bl)
+            bl.pop()
+
+#sends bloons
+    if counter % 200 == 0:
+        if num < 8:
+            newbloon = Bloon("red")
+            newbloon.setpos(-50, 328)
+        elif num < 12:
+            nb = Bloon("rb")
+            newbloon = Bloon("blue")
+            
+            nb.setpos(-50, 328)
+            newbloon.setpos(-50, 328)
+        
+        
+        num += 1
+    counter += 1
+
+    if len(stars) > 0: sprites = RenderPlain(bloons, monkey, stars)
+    else: sprites = RenderPlain(bloons, monkey)
 
 #render and update screen, sprites, and text
     t = f.render("Hits: " + str(hits), False, black)
