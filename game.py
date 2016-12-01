@@ -16,7 +16,7 @@ from pygame.sprite import *
 
 pygame.init();
 
-DELAY = 20;
+DELAY = 15;
 blue = (50, 150, 255)
 green = (122, 244, 66)
 black = (0,0,0)
@@ -27,6 +27,7 @@ screeny = 600
 
 bloons = pygame.sprite.Group()
 stars = pygame.sprite.Group()
+monkeys = pygame.sprite.Group()
 
 class Border(Sprite):
 
@@ -48,7 +49,7 @@ class Border(Sprite):
 class Monkey(Sprite):
 
     def __init__(self):
-        Sprite.__init__(self)
+        Sprite.__init__(self, monkeys)
 
         im = image.load(r"media\ninja_monkey.png").convert_alpha()
         self.image = pygame.transform.scale(im, (100, 100))
@@ -58,13 +59,9 @@ class Monkey(Sprite):
     def setpos(self, x, y):
         self.rect.center = (x, y)
 
-    def getRect(self):
-        return self.rect.center
-
-class Star(Monkey):
+class Star(Sprite):
 
     def __init__(self):
-        Monkey.__init__(self)
         Sprite.__init__(self, stars)
 
         im = image.load(r"media\ninja_star.png").convert_alpha()
@@ -76,10 +73,13 @@ class Star(Monkey):
         self.rect.x += 3
         self.rect.y += 3
 
-class BottomStar(Monkey):
+    def setpos(self, x, y):
+        self.rect.center = (x, y)
+
+class BottomStar(Star):
 
     def __init__(self):
-        Monkey.__init__(self)
+        Star.__init__(self)
         Sprite.__init__(self, stars)
 
         im = image.load(r"media\ninja_star.png").convert_alpha()
@@ -175,6 +175,17 @@ def stop(gameover=False, pause=False, begin=False):
 
             display.update()
 
+def addMonkey():
+
+    t = fmed.render("You earned another monkey! Click to place", False, black)
+
+    while True:
+        e = pygame.event.wait()
+        screen.blit(t, (15, 220))
+        
+        if e.type in (pygame.QUIT, pygame.MOUSEBUTTONDOWN): return
+        display.update()
+
 #determine bloon/star collision
 #input is bloon and group of star sprites
 #output is 
@@ -225,12 +236,9 @@ stop(begin=True)
 x, y = mouse.get_pos()
 monkey.setpos(x, y)
 
-sprites = RenderPlain(monkey)
+sprites = RenderPlain(monkeys)
 counter = 0
 num = 0
-
-redbloons = 10
-bluebloons = 20
 
 #game loop
 while True:
@@ -275,7 +283,7 @@ while True:
         if num < 8:
             newbloon = Bloon("red")
             newbloon.setpos(-50, 328)
-        elif num < 12:
+        elif num < 15:
             nb = Bloon("rb")
             newbloon = Bloon("blue")
             
@@ -286,8 +294,14 @@ while True:
         num += 1
     counter += 1
 
-    if len(stars) > 0: sprites = RenderPlain(bloons, monkey, stars)
-    else: sprites = RenderPlain(bloons, monkey)
+    if len(stars) > 0: sprites = RenderPlain(bloons, monkeys, stars)
+    else: sprites = RenderPlain(bloons, monkeys)
+
+    if num >= 22: 
+        addMonkey()
+        x, y = mouse.get_pos()
+        m = Monkey()
+        m.setpos(x, y)
 
 #render and update screen, sprites, and text
     t = f.render("Hits: " + str(hits), False, black)
