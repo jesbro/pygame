@@ -154,7 +154,7 @@ class Bloon(Sprite):
             return True
         return False
         
-def stop(gameover=False, pause=False, begin=False, mhit=True):
+def stop(gameover=False, pause=False, begin=False):
     t3 = fbig.render(" Game Over ", False, black, white)
     t4 = f.render(" Click anywhere to continue ", False, black, white)
     t5 = fbig.render(" Paused ", False, black, white)
@@ -188,21 +188,18 @@ def stop(gameover=False, pause=False, begin=False, mhit=True):
     elif begin:
         while True:
             e = pygame.event.wait()
+
             screen.blit(t6, (10, 220))
             #screen.blit(t7, (200, 100))
             #screen.blit(t8, (200, 500))
             screen.blit(t9, (240, 390))
 
-            if e.type in (pygame.QUIT, pygame.MOUSEBUTTONDOWN): return
-
-            display.update()
-
-    elif mhit:
-        while True:
-            e = pygame.event.wait()
-            screen.blit(t11, (200,150))
-
-            if e.type in (pygame.QUIT, pygame.MOUSEBUTTONDOWN): return
+            if e.type in (pygame.QUIT, pygame.MOUSEBUTTONDOWN):
+                x, y = mouse.get_pos()
+                if y > 300 and y < 475:
+                    screen.blit(t11, (200,150))
+                else:
+                    return
 
             display.update()
 
@@ -278,12 +275,10 @@ fbig = font.SysFont("candara", 100)
 
 b1 = Border() #top border
 b2 = Border() #bottom border
-b3 = Border(mid=True) #rectangle following path (to make sure monkeys are in the correct spots)
 monkey = Monkey() #monkey
 
 b1.setpos(0, 228)
 b2.setpos(0, 445)
-b3.setpos(0, 280)
 
 time.set_timer(USEREVENT+ 1, DELAY) #is for timer
 
@@ -303,17 +298,10 @@ display.update()
 
 stop(begin=True)
 
-#set monkey position
 x, y = mouse.get_pos()
 monkey.setpos(x, y)
 
-while b3.hit(monkey):
-    stop(mhit=True)
-
-x, y = mouse.get_pos()
-monkey.setpos(x, y)
-
-sprites = RenderPlain(monkeys,b3)
+sprites = RenderPlain(monkeys)
 
 #game loop
 while True:
